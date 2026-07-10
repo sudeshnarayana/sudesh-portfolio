@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, MapPin, Send, CheckCircle2, MessageSquare, AlertCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { supabase } from '../supabaseClient';
 
 export default function Contact() {
   const [name, setName] = useState('');
@@ -19,7 +20,7 @@ export default function Contact() {
       return Math.random() * (max - min) + min;
     }
 
-    const interval = setInterval(function() {
+    const interval = setInterval(function () {
       const timeLeft = animationEnd - Date.now();
 
       if (timeLeft <= 0) {
@@ -27,16 +28,14 @@ export default function Contact() {
       }
 
       const particleCount = 50 * (timeLeft / duration);
-      // since particles fall down, start a bit higher than random
       confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
       confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
     }, 250);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Client-side validations
+
     if (!name.trim()) {
       setStatus('error');
       setErrorMsg('Name is required.');
@@ -56,14 +55,21 @@ export default function Contact() {
     setStatus('submitting');
     setErrorMsg('');
 
-    // Simulate API call
-    setTimeout(() => {
-      setStatus('success');
-      triggerConfetti();
-      setName('');
-      setEmail('');
-      setMessage('');
-    }, 1500);
+    const { error } = await supabase.from('contact_messages').insert([
+      { name: name.trim(), email: email.trim(), message: message.trim() },
+    ]);
+
+    if (error) {
+      setStatus('error');
+      setErrorMsg('Something went wrong sending your message. Please try again.');
+      return;
+    }
+
+    setStatus('success');
+    triggerConfetti();
+    setName('');
+    setEmail('');
+    setMessage('');
   };
 
   return (
@@ -71,7 +77,6 @@ export default function Contact() {
       <div className="absolute top-1/2 left-1/10 w-96 h-96 bg-violet-500/5 rounded-full filter blur-3xl pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-6 relative z-10">
-        {/* Section Heading */}
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="font-heading font-extrabold text-3xl sm:text-4xl text-slate-900 dark:text-white mb-4">
             Get in Touch
@@ -83,7 +88,6 @@ export default function Contact() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch">
-          {/* Info Side */}
           <div className="lg:col-span-5 flex flex-col justify-between space-y-8 text-left">
             <div className="space-y-6">
               <h3 className="font-heading font-bold text-2xl text-slate-900 dark:text-white">
@@ -95,20 +99,18 @@ export default function Contact() {
             </div>
 
             <div className="space-y-6 py-6">
-              {/* Email */}
               <div className="flex items-center space-x-4">
                 <div className="p-3.5 rounded-2xl bg-violet-600/10 dark:bg-violet-400/10 text-violet-600 dark:text-violet-400 border border-violet-600/10">
                   <Mail className="w-5 h-5" />
                 </div>
                 <div>
                   <span className="block text-xs font-semibold text-slate-400 uppercase tracking-wide">Email Me</span>
-                  <a href="mailto:sudesh@example.com" className="font-heading font-bold text-slate-800 dark:text-slate-200 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
-                    sudesh@example.com
+                  <a href="mailto:sudeshnarayana2001@gmail.com" className="font-heading font-bold text-slate-800 dark:text-slate-200 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
+                    sudeshnarayana2001@gmail.com
                   </a>
                 </div>
               </div>
 
-              {/* Location */}
               <div className="flex items-center space-x-4">
                 <div className="p-3.5 rounded-2xl bg-fuchsia-600/10 dark:bg-fuchsia-400/10 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-600/10">
                   <MapPin className="w-5 h-5" />
@@ -122,7 +124,6 @@ export default function Contact() {
               </div>
             </div>
 
-            {/* Quote Card */}
             <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/60 text-sm text-slate-500 dark:text-slate-400 flex items-start space-x-3 italic">
               <MessageSquare className="w-5 h-5 text-violet-500 mt-0.5 flex-shrink-0" />
               <p>
@@ -131,7 +132,6 @@ export default function Contact() {
             </div>
           </div>
 
-          {/* Form Side */}
           <div className="lg:col-span-7 glass-panel rounded-3xl p-8 border border-slate-200/50 dark:border-slate-800/80 glow-primary relative">
             <AnimatePresence mode="wait">
               {status === 'success' ? (
@@ -168,7 +168,6 @@ export default function Contact() {
                   className="space-y-6 text-left"
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    {/* Name */}
                     <div className="space-y-2">
                       <label htmlFor="name" className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                         Your Name
@@ -178,13 +177,12 @@ export default function Contact() {
                         id="name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Sudesh"
+                        placeholder="Your name"
                         disabled={status === 'submitting'}
                         className="w-full px-4 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-600 dark:focus:border-violet-400 transition-all duration-300 disabled:opacity-50"
                       />
                     </div>
 
-                    {/* Email */}
                     <div className="space-y-2">
                       <label htmlFor="email" className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                         Email Address
@@ -194,14 +192,13 @@ export default function Contact() {
                         id="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="sudesh@example.com"
+                        placeholder="you@example.com"
                         disabled={status === 'submitting'}
                         className="w-full px-4 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-600 dark:focus:border-violet-400 transition-all duration-300 disabled:opacity-50"
                       />
                     </div>
                   </div>
 
-                  {/* Message */}
                   <div className="space-y-2">
                     <label htmlFor="message" className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                       Message
@@ -211,13 +208,12 @@ export default function Contact() {
                       rows={5}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Hi Sudesh, I would love to talk about an internship opportunity..."
+                      placeholder="Hi, I would love to talk about an opportunity..."
                       disabled={status === 'submitting'}
                       className="w-full px-4 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-600 dark:focus:border-violet-400 transition-all duration-300 resize-none disabled:opacity-50"
                     />
                   </div>
 
-                  {/* Error Notification */}
                   {status === 'error' && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
@@ -229,7 +225,6 @@ export default function Contact() {
                     </motion.div>
                   )}
 
-                  {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={status === 'submitting'}

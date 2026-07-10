@@ -7,7 +7,7 @@ import ExperienceTimeline from './components/ExperienceTimeline';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 
-export default function App() {
+export default function PortfolioLayout() {
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     // Check local storage or system preference
     if (typeof window !== 'undefined') {
@@ -36,7 +36,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 dark:bg-[#07080d] dark:text-slate-100 transition-colors duration-300 relative">
+    <div className="min-h-screen bg-white text-slate-900 dark:bg-[#0a192f] dark:text-slate-100 transition-colors duration-300 relative">
       {/* Base Grid Background */}
       <div className="absolute inset-0 bg-grid-pattern opacity-70 pointer-events-none z-0" />
       

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Mail } from 'lucide-react';
-import profileImg from '../assets/profile.png';
+import { supabase } from '../supabaseClient';
 
 const GithubIcon = () => (
   <svg viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -18,23 +18,48 @@ const LinkedinIcon = () => (
   </svg>
 );
 
+interface Profile {
+  full_name: string;
+  professional_title: string;
+  about_me: string;
+  profile_image_url: string;
+  email: string;
+}
+
+// Fallback roles used for the typing animation if no title is set in DB
+const DEFAULT_ROLES = ['Software Engineer', 'Full-Stack Developer'];
+
 export default function Hero() {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+
   const [textIndex, setTextIndex] = useState(0);
   const [displayText, setDisplayText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const roles = [
-    'Software Engineer',
-    'Full-Stack Developer',
-    'Cloud Enthusiast',
-    'IT Undergraduate'
-  ];
+
   const typingSpeed = 100;
   const deletingSpeed = 50;
   const delayBetweenRoles = 2000;
 
   useEffect(() => {
+    async function fetchProfile() {
+      const { data, error } = await supabase.from('profile').select('*').limit(1).single();
+      if (!error && data) {
+        setProfile(data);
+      }
+      setLoading(false);
+    }
+    fetchProfile();
+  }, []);
+
+  // Typing animation cycles through the professional_title (split by comma) or falls back to defaults
+  const roles = profile?.professional_title
+    ? profile.professional_title.split(',').map(r => r.trim()).filter(Boolean)
+    : DEFAULT_ROLES;
+
+  useEffect(() => {
     let timer: any;
-    const currentFullText = roles[textIndex];
+    const currentFullText = roles[textIndex % roles.length];
 
     if (isDeleting) {
       timer = setTimeout(() => {
@@ -54,7 +79,8 @@ export default function Hero() {
     }
 
     return () => clearTimeout(timer);
-  }, [displayText, isDeleting, textIndex]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayText, isDeleting, textIndex, profile]);
 
   const handleScrollTo = (id: string) => {
     const element = document.getElementById(id);
@@ -72,6 +98,20 @@ export default function Hero() {
     }
   };
 
+  if (loading) {
+    return (
+      <section id="home" className="relative min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-slate-400 text-sm">Loading...</div>
+      </section>
+    );
+  }
+
+  const fullName = profile?.full_name || 'Your Name';
+  const [firstName, ...rest] = fullName.split(' ');
+  const lastName = rest.join(' ');
+  const aboutMe = profile?.about_me || 'Add your bio from the admin panel to see it appear here.';
+  const email = profile?.email;
+
   return (
     <section id="home" className="relative min-h-screen flex items-center justify-center pt-24 pb-16 overflow-hidden">
       {/* Dynamic Background Glows */}
@@ -81,7 +121,7 @@ export default function Hero() {
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10 w-full">
         {/* Intro Text */}
         <div className="lg:col-span-7 flex flex-col items-start text-left space-y-6">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -100,7 +140,7 @@ export default function Hero() {
             className="space-y-3"
           >
             <h1 className="font-heading font-extrabold text-4xl sm:text-5xl md:text-6xl tracking-tight text-slate-900 dark:text-white leading-tight">
-              Hi, I'm <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 dark:from-violet-400 dark:to-fuchsia-400 bg-clip-text text-transparent">Sudesh Narayana</span>
+              Hi, I'm <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 dark:from-violet-400 dark:to-fuchsia-400 bg-clip-text text-transparent">{firstName} {lastName}</span>
             </h1>
             <h2 className="font-heading font-bold text-2xl sm:text-3xl text-slate-700 dark:text-slate-300 flex items-center min-h-[48px]">
               I am a&nbsp;
@@ -111,17 +151,17 @@ export default function Hero() {
             </h2>
           </motion.div>
 
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed"
           >
-            An ambitious IT student specializing in Software Engineering. I combine robust backend systems design with fluid, state-of-the-art frontend user interfaces to build impactful web applications.
+            {aboutMe}
           </motion.p>
 
-          {/* Social Links & CTA */}
-          <motion.div 
+          {/* CTA Buttons */}
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
@@ -143,88 +183,66 @@ export default function Hero() {
           </motion.div>
 
           {/* Social Icons */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
             className="flex items-center space-x-4 pt-4"
           >
-            <a 
-              href="https://github.com" 
-              target="_blank" 
+            <a
+              href="https://github.com"
+              target="_blank"
               rel="noopener noreferrer"
               className="p-3 rounded-xl bg-slate-100 hover:bg-violet-600 hover:text-white dark:bg-slate-900 dark:hover:bg-violet-500 text-slate-600 dark:text-slate-400 dark:hover:text-white transition-all duration-300 flex items-center justify-center"
               aria-label="GitHub Profile"
             >
               <GithubIcon />
             </a>
-            <a 
-              href="https://linkedin.com" 
-              target="_blank" 
+            <a
+              href="https://linkedin.com"
+              target="_blank"
               rel="noopener noreferrer"
               className="p-3 rounded-xl bg-slate-100 hover:bg-violet-600 hover:text-white dark:bg-slate-900 dark:hover:bg-violet-500 text-slate-600 dark:text-slate-400 dark:hover:text-white transition-all duration-300 flex items-center justify-center"
               aria-label="LinkedIn Profile"
             >
               <LinkedinIcon />
             </a>
-            <a 
-              href="mailto:sudesh@example.com"
-              className="p-3 rounded-xl bg-slate-100 hover:bg-violet-600 hover:text-white dark:bg-slate-900 dark:hover:bg-violet-500 text-slate-600 dark:text-slate-400 dark:hover:text-white transition-all duration-300"
-              aria-label="Send Email"
-            >
-              <Mail className="w-5 h-5" />
-            </a>
+            {email && (
+              <a
+                href={`mailto:${email}`}
+                className="p-3 rounded-xl bg-slate-100 hover:bg-violet-600 hover:text-white dark:bg-slate-900 dark:hover:bg-violet-500 text-slate-600 dark:text-slate-400 dark:hover:text-white transition-all duration-300"
+                aria-label="Send Email"
+              >
+                <Mail className="w-5 h-5" />
+              </a>
+            )}
           </motion.div>
         </div>
 
         {/* Hero Interactive Visual */}
         <div className="lg:col-span-5 flex justify-center items-center relative">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7 }}
             className="w-full max-w-[400px] aspect-square relative"
           >
-            {/* Outer Rotating Circles */}
             <div className="absolute inset-0 border border-dashed border-violet-600/20 dark:border-violet-400/25 rounded-full animate-[spin_40s_linear_infinite]" />
             <div className="absolute inset-8 border border-dashed border-fuchsia-600/10 dark:border-fuchsia-400/20 rounded-full animate-[spin_20s_linear_infinite_reverse]" />
 
-            {/* Profile Avatar Image */}
             <div className="absolute inset-16 flex items-center justify-center rounded-full glass-panel glow-primary border border-white/20 dark:border-white/5 shadow-2xl relative overflow-hidden group">
-              <img 
-                src={profileImg} 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                alt="Sudesh Profile Avatar"
-              />
+              {profile?.profile_image_url ? (
+                <img
+                  src={profile.profile_image_url}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  alt={`${fullName} Avatar`}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-5xl font-heading font-extrabold text-violet-600 dark:text-violet-400">
+                  {firstName?.[0] || '?'}
+                </div>
+              )}
             </div>
-
-            {/* Floating Metric Tags */}
-            <motion.div 
-              animate={{ y: [0, -10, 0] }}
-              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-              className="absolute -top-4 -right-4 px-4 py-2.5 rounded-2xl glass-panel shadow-md border border-white/40 dark:border-slate-800/80 flex items-center space-x-2"
-            >
-              <span className="text-sm font-extrabold text-violet-600 dark:text-violet-400">3.9+</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">GPA</span>
-            </motion.div>
-
-            <motion.div 
-              animate={{ y: [0, 10, 0] }}
-              transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 1 }}
-              className="absolute -bottom-4 -left-4 px-4 py-2.5 rounded-2xl glass-panel shadow-md border border-white/40 dark:border-slate-800/80 flex items-center space-x-2"
-            >
-              <span className="text-sm font-extrabold text-fuchsia-600 dark:text-fuchsia-400">10+</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Completed Projects</span>
-            </motion.div>
-
-            <motion.div 
-              animate={{ x: [0, 8, 0] }}
-              transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut", delay: 0.5 }}
-              className="absolute top-1/2 -right-8 -translate-y-1/2 px-4 py-2.5 rounded-2xl glass-panel shadow-md border border-white/40 dark:border-slate-800/80 flex items-center space-x-2"
-            >
-              <span className="text-sm font-extrabold text-teal-600 dark:text-teal-400">5+</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Certificates</span>
-            </motion.div>
           </motion.div>
         </div>
       </div>
