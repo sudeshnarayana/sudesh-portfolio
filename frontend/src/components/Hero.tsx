@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Mail } from 'lucide-react';
+import { ArrowRight, Mail, Download } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 const GithubIcon = () => (
@@ -32,6 +32,7 @@ const DEFAULT_ROLES = ['Software Engineer', 'Full-Stack Developer'];
 export default function Hero() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [resumeUrl, setResumeUrl] = useState<string | null>(null);
 
   const [textIndex, setTextIndex] = useState(0);
   const [displayText, setDisplayText] = useState('');
@@ -49,7 +50,26 @@ export default function Hero() {
       }
       setLoading(false);
     }
+
+    async function fetchResume() {
+      const bucketName = 'portfolio-assets';
+      const { data, error } = await supabase.storage.from(bucketName).list('resumes', {
+        limit: 10,
+        offset: 0,
+        sortBy: { column: 'created_at', order: 'desc' },
+      });
+
+      if (!error && data) {
+        const latestResume = data.find((file: { name: string }) => file.name !== '.emptyFolderPlaceholder');
+        if (latestResume) {
+          const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(`resumes/${latestResume.name}`);
+          setResumeUrl(publicUrlData.publicUrl);
+        }
+      }
+    }
+
     fetchProfile();
+    fetchResume();
   }, []);
 
   // Typing animation cycles through the professional_title (split by comma) or falls back to defaults
@@ -174,6 +194,16 @@ export default function Hero() {
               <span>View Projects</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
+            {resumeUrl && (
+              <a
+                href={resumeUrl}
+                download
+                className="flex items-center space-x-2 px-6 py-3.5 rounded-xl font-semibold bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition-all duration-300"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download CV</span>
+              </a>
+            )}
             <button
               onClick={() => handleScrollTo('contact')}
               className="flex items-center space-x-2 px-6 py-3.5 rounded-xl font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900/60 transition-all duration-300 cursor-pointer"
